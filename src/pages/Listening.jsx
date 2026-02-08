@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './listening.css';
 import { useNavigate } from 'react-router-dom';
+import listening from '../audio/listening.mp3'
 
 const Listening = ({ examId }) => {
   const navigate = useNavigate();
@@ -10,9 +11,6 @@ const Listening = ({ examId }) => {
   const [examStarted, setExamStarted] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showQuestions, setShowQuestions] = useState(true);
-  const [showAnswers, setShowAnswers] = useState(true);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   const baseUrl = 'https://qwertyuiop999.pythonanywhere.com/';
 
@@ -21,7 +19,8 @@ const Listening = ({ examId }) => {
       q1: '', q2: '', q3: '', q4: '', q5: '', q6: '', q7: '', q8: '', q9: '', q10: ''
     },
     part2: {
-      q11: '', q12: '', q13: '', q14: '', q15: '', q16: '', q17: '', q18: '', q19: '', q20: ''
+      q11: '', q12: '', q13: '', q14: '', q15: '', q16: '', 
+      q17: '', q18: '', q19: '', q20: ''
     },
     part3: {
       q21: '',
@@ -35,19 +34,6 @@ const Listening = ({ examId }) => {
       q31: '', q32: '', q33: '', q34: '', q35: '', q36: '', q37: '', q38: '', q39: '', q40: ''
     }
   });
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-      if (window.innerWidth >= 1024) {
-        setShowQuestions(true);
-        setShowAnswers(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const getAccessToken = () => {
     const token = localStorage.getItem('accessToken');
@@ -210,7 +196,7 @@ const Listening = ({ examId }) => {
     }));
   };
 
-  const handlePart2SingleChoice = (question, value) => {
+  const handlePart2Change = (question, value) => {
     setAnswers(prev => ({
       ...prev,
       part2: {
@@ -269,39 +255,14 @@ const Listening = ({ examId }) => {
     }
   };
 
-  const saveAnswersLocally = () => {
-    try {
-      localStorage.setItem('listeningAnswers', JSON.stringify(answers));
-      setSuccess('Answers saved locally.');
-    } catch (err) {
-      setError('Failed to save answers locally.');
+  const audioRef = useRef(null);
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((error) => {
+        console.log("Autoplay was prevented. Interaction required:", error);
+      });
     }
-  };
-
-  const toggleQuestions = () => {
-    if (isMobile) {
-      setShowQuestions(!showQuestions);
-      if (!showQuestions && !showAnswers) {
-        setShowAnswers(true);
-      }
-    }
-  };
-
-  const toggleAnswers = () => {
-    if (isMobile) {
-      setShowAnswers(!showAnswers);
-      if (!showQuestions && !showAnswers) {
-        setShowQuestions(true);
-      }
-    }
-  };
-
-  const showBothPanels = () => {
-    if (isMobile) {
-      setShowQuestions(true);
-      setShowAnswers(true);
-    }
-  };
+  }, []);
 
   return (
     <div className="ielts-container">
@@ -318,54 +279,17 @@ const Listening = ({ examId }) => {
           </div>
         </div>
 
-        <div className="header-right">
-          <div className="view-toggle-section">
-            <div className="toggle-buttons">
-              <button 
-                className={`toggle-btn ${showQuestions ? 'active' : ''}`}
-                onClick={toggleQuestions}
-              >
-                <span className="toggle-icon">📝</span>
-                Questions
-              </button>
-              <button 
-                className={`toggle-btn ${showAnswers ? 'active' : ''}`}
-                onClick={toggleAnswers}
-              >
-                <span className="toggle-icon">✏️</span>
-                Answer Sheet
-              </button>
-              {isMobile && (
-                <button 
-                  className="toggle-btn both-btn"
-                  onClick={showBothPanels}
-                >
-                  <span className="toggle-icon">📋</span>
-                  Both
-                </button>
-              )}
-            </div>
-            <div className="view-status">
-              {isMobile ? (
-                <span className="status-text">
-                  {showQuestions && showAnswers ? 'Both Panels' : 
-                   showQuestions ? 'Questions Only' : 'Answer Sheet Only'}
-                </span>
-              ) : (
-                <span className="status-text">Split View - Both panels visible</span>
-              )}
-            </div>
-          </div>
+        <div className="flex items-center justify-center p-4 bg-slate-100 rounded-lg shadow-sm border border-slate-200">
+          <span className="text-sm font-medium text-slate-600 animate-pulse">
+            Audio playing...
+          </span>
+          <audio ref={audioRef} src={listening}>
+            Your browser does not support the audio element.
+          </audio>
+        </div>
 
+        <div className="header-right">
           <div className="action-buttons">
-            <button 
-              onClick={saveAnswersLocally} 
-              className="action-btn save-btn"
-              disabled={loading || submitting}
-            >
-              <span className="btn-icon">💾</span>
-              Save Progress
-            </button>
             <button 
               onClick={clearAllAnswers} 
               className="action-btn clear-btn"
@@ -412,754 +336,691 @@ const Listening = ({ examId }) => {
         </div>
       )}
 
-      {/* Main Content - Split View */}
-      <main className={`main-content ${!showQuestions ? 'answers-only' : ''} ${!showAnswers ? 'questions-only' : ''}`}>
-        {/* Questions Panel */}
-        {(showQuestions || !isMobile) && (
-          <div className={`questions-panel ${!showAnswers && isMobile ? 'full-width' : ''}`}>
-            <div className="panel-header">
-              <h2 className="panel-title">
-                <span className="title-icon">🎧</span>
-                Listening Test Questions
-              </h2>
-              <div className="panel-badge">
-                <span className="badge-text">Part 1-4</span>
-                <span className="badge-count">40 Questions</span>
-              </div>
-            </div>
-
-            <div className="panel-content">
-              {/* Part 1 */}
-              <section className="test-section part-section">
-                <div className="section-header">
-                  <div className="section-number">01</div>
-                  <div className="section-info">
-                    <h3>Part 1: Questions 1-10</h3>
-                    <p className="section-subtitle">Complete the notes below. Write NO MORE THAN TWO WORDS for each answer.</p>
-                  </div>
-                </div>
-
-                <div className="section-content">
-                  <div className="hotel-table-container">
-                    <table className="hotel-table">
-                      <thead>
-                        <tr>
-                          <th>Hotel Name</th>
-                          <th>Location</th>
-                          <th>Cost</th>
-                          <th>Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="hotel-name">Belvedere Gardens Hotel</td>
-                          <td>Example: opposite Grimes Tower</td>
-                          <td>
-                            $50 per night including<br />
-                            <span className="answer-space">Answer 1</span>
-                          </td>
-                          <td>
-                            <span className="answer-space">Answer 2</span><br />
-                            breakfast<br />
-                            served each evening
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="hotel-name">Belfield Grande</td>
-                          <td>
-                            On the south side of Edgeware<br />
-                            <span className="answer-space">Answer 3</span>
-                          </td>
-                          <td>
-                            $55 per night ($10 discount if<br />
-                            <span className="answer-space">Answer 4</span>)<br />
-                            price inclusive of
-                          </td>
-                          <td>
-                            <span className="answer-space">Answer 5</span><br />
-                            served in the<br />
-                            <span className="answer-space">Answer 6</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <span className="answer-space">Answer 7</span><br />
-                            Hotel
-                          </td>
-                          <td>
-                            At the entrance to the<br />
-                            <span className="answer-space">Answer 8</span><br />
-                            zone
-                          </td>
-                          <td>
-                            $28 weekdays and $40 on weekends<br />
-                            and<br />
-                            <span className="answer-space">Answer 9</span>
-                          </td>
-                          <td>
-                            must book<br />
-                            well<br />
-                            <span className="answer-space">Answer 10</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </section>
-
-              {/* Part 2 */}
-              <section className="test-section part-section">
-                <div className="section-header">
-                  <div className="section-number">02</div>
-                  <div className="section-info">
-                    <h3>Part 2: Questions 11-20</h3>
-                    <p className="section-subtitle">Questions 11-16: Label the map. Questions 17-20: Multiple choice.</p>
-                  </div>
-                </div>
-
-                <div className="section-content">
-                  <div className="map-container">
-                    <div className="map-title">King's Cross Station Map</div>
-                    <div className="map-placeholder">
-                      <div className="station-map">
-                        [Station Map Image]
-                      </div>
-                      <div className="map-legend">
-                        <div className="legend-item">
-                          <span className="legend-marker">📍</span>
-                          <span className="legend-label">11. Left Luggage office</span>
-                        </div>
-                        <div className="legend-item">
-                          <span className="legend-marker">🚇</span>
-                          <span className="legend-label">12. Underground station</span>
-                        </div>
-                        <div className="legend-item">
-                          <span className="legend-marker">🍔</span>
-                          <span className="legend-label">13. Burgerland</span>
-                        </div>
-                        <div className="legend-item">
-                          <span className="legend-marker">🎫</span>
-                          <span className="legend-label">14. Ticket office</span>
-                        </div>
-                        <div className="legend-item">
-                          <span className="legend-marker">🍕</span>
-                          <span className="legend-label">15. Pizzeria</span>
-                        </div>
-                        <div className="legend-item">
-                          <span className="legend-marker">🚂</span>
-                          <span className="legend-label">16. Platform 9¾</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mcq-container">
-                    <h4 className="mcq-title">Questions 17-20: Multiple Choice</h4>
-                    <div className="mcq-item">
-                      <p className="mcq-question">17. The tour is going to</p>
-                      <div className="mcq-options">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">visit all major London landmarks.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">only visit selected landmarks in London.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">be a leisurely tour of most London landmarks.</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mcq-item">
-                      <p className="mcq-question">18. Tour members</p>
-                      <div className="mcq-options">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">may be unfamiliar with the Underground.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">are all equally familiar with the Underground.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">are all unfamiliar with the Underground.</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mcq-item">
-                      <p className="mcq-question">19. The tour group is intending to</p>
-                      <div className="mcq-options">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">take a morning train.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">avoid trains crowded with shoppers.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">avoid the rush hour.</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mcq-item">
-                      <p className="mcq-question">20. Seating on Underground trains</p>
-                      <div className="mcq-options">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">has been previously reserved.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">can be guaranteed for those with a disability.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">is never guaranteed</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Part 3 */}
-              <section className="test-section part-section">
-                <div className="section-header">
-                  <div className="section-number">03</div>
-                  <div className="section-info">
-                    <h3>Part 3: Questions 21-30</h3>
-                    <p className="section-subtitle">Multiple choice and matching questions.</p>
-                  </div>
-                </div>
-
-                <div className="section-content">
-                  <div className="mcq-container">
-                    <div className="mcq-item">
-                      <p className="mcq-question">21. The construction of the new faculty building will</p>
-                      <div className="mcq-options">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">finish during the summer.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">conclude during the first term.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">be approved during the summer.</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mcq-item">
-                      <p className="mcq-question">Questions 22-23. The two main sources of funding for the project were</p>
-                      <div className="mcq-options multiple-select">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">government money.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">a college grant.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">alumni donations.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">D</span>
-                          <span className="option-text">the commerce faculty.</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">E</span>
-                          <span className="option-text">an unnamed patron.</span>
-                        </div>
-                      </div>
-                      <p className="instruction-note">Select TWO letters</p>
-                    </div>
-
-                    <div className="mcq-item">
-                      <p className="mcq-question">Questions 24-25. What two new items are added to the plans?</p>
-                      <div className="mcq-options multiple-select">
-                        <div className="mcq-option">
-                          <span className="option-letter">A</span>
-                          <span className="option-text">a larger gym</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">B</span>
-                          <span className="option-text">a relaxation room</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">C</span>
-                          <span className="option-text">a computer lab</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">D</span>
-                          <span className="option-text">a hardware zone</span>
-                        </div>
-                        <div className="mcq-option">
-                          <span className="option-letter">E</span>
-                          <span className="option-text">lecture rooms</span>
-                        </div>
-                      </div>
-                      <p className="instruction-note">Select TWO letters</p>
-                    </div>
-
-                    <div className="table-container">
-                      <p className="table-title">Questions 26-30. What does Melisa decide about the following modules?</p>
-                      <table className="module-table">
-                        <thead>
-                          <tr>
-                            <th>Module</th>
-                            <th>A: She will study it</th>
-                            <th>B: She won't study it</th>
-                            <th>C: She might study it</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>26. International Markets</td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                          </tr>
-                          <tr>
-                            <td>27. Product Placement</td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                          </tr>
-                          <tr>
-                            <td>28. Organisational Behaviour</td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                          </tr>
-                          <tr>
-                            <td>29. Managing People</td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                          </tr>
-                          <tr>
-                            <td>30. Public Relations</td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                            <td><span className="table-answer">Select</span></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Part 4 */}
-              <section className="test-section part-section">
-                <div className="section-header">
-                  <div className="section-number">04</div>
-                  <div className="section-info">
-                    <h3>Part 4: Questions 31-40</h3>
-                    <p className="section-subtitle">Complete the sentences and table.</p>
-                  </div>
-                </div>
-
-                <div className="section-content">
-                  <div className="sentence-completion">
-                    <h4 className="completion-title">Questions 31-32</h4>
-                    <p className="completion-text">
-                      It seems that personality tests are part of our
-                      <span className="answer-space">Answer 31</span>
-                      as they fulfil a basic human need to understand motivation.
-                    </p>
-                    <p className="completion-text">
-                      Understanding why we communicate and
-                      <span className="answer-space">Answer 32</span>
-                      others in the way that we do is revealed by personality tests.
-                    </p>
-                  </div>
-
-                  <div className="table-container">
-                    <h4 className="table-title">Questions 33-40: Complete the table below</h4>
-                    <table className="personality-table">
-                      <thead>
-                        <tr>
-                          <th>Test type</th>
-                          <th>What is assessed</th>
-                          <th>Who uses it</th>
-                          <th>Accuracy</th>
-                          <th>Advantages/Disadvantages</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td><strong>Graphology</strong><br />(Handwriting test)</td>
-                          <td>handwriting such as style and how letters are formed</td>
-                          <td>careers officers/ potential employers</td>
-                          <td>
-                            believed to have
-                            <span className="answer-space">Answer 33</span>
-                            by the British Psychological Society
-                          </td>
-                          <td>
-                            can be biased by a/an
-                            <span className="answer-space">Answer 34</span>
-                            subjectivity: however, on the plus side, it is quick and easy to use
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><strong>Rorschach</strong><br />(Ink blot test)</td>
-                          <td>individual reactions to a series of ink blots on pieces of card</td>
-                          <td>
-                            respected
-                            <span className="answer-space">Answer 35</span>
-                            like the Tavistock Clinic
-                          </td>
-                          <td>critics regard it merely as a pseudoscience whilst others hold it in high regard</td>
-                          <td>
-                            a major problem of the test is that it is affected by
-                            <span className="answer-space">Answer 36</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td><strong>Luscher</strong><br />(Colour test)</td>
-                          <td>
-                            individual response to
-                            <span className="answer-space">Answer 37</span>
-                            that are ranked in order of preference
-                          </td>
-                          <td>doctors, psychologists, government agencies and universities</td>
-                          <td>
-                            seemingly a
-                            <span className="answer-space">Answer 38</span>
-                            of psychological assessment
-                          </td>
-                          <td>a benefit of the test is that it is sensitive enough to respond to individual mood changes</td>
-                        </tr>
-                        <tr>
-                          <td><strong>TAT</strong><br />(Thematic Apperception Test)</td>
-                          <td>
-                            how an individual creates stories based on a set of cards featuring
-                            <span className="answer-space">Answer 39</span>
-                            in ambiguous scenes
-                          </td>
-                          <td>those working in psychological research and forensic science</td>
-                          <td>
-                            due to the
-                            <span className="answer-space">Answer 40</span>
-                            a universally agreed method of scoring and standardised cards, individual comparisons are problematic
-                          </td>
-                          <td>the fact that it is quick and simple to use is a huge advantage</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </section>
+      {/* Main Content - Single Panel */}
+      <main className="main-content single-panel">
+        {/* Questions Panel with Integrated Answer Fields */}
+        <div className="questions-panel full-width">
+          <div className="panel-header">
+            <h2 className="panel-title">
+              <span className="title-icon">🎧</span>
+              Listening Test Questions
+            </h2>
+            <div className="panel-badge">
+              <span className="badge-text">Part 1-4</span>
+              <span className="badge-count">40 Questions</span>
             </div>
           </div>
-        )}
 
-        {/* Answer Sheet Panel */}
-        {(showAnswers || !isMobile) && (
-          <div className={`answers-panel ${!showQuestions && isMobile ? 'full-width' : ''}`}>
-            <div className="panel-header">
-              <h2 className="panel-title">
-                <span className="title-icon">📝</span>
-                Answer Sheet
-              </h2>
-              <div className="panel-badge">
-                <span className="badge-text">Auto-save</span>
-                <span className="badge-indicator">●</span>
-              </div>
-            </div>
-
-            <div className="panel-content">
-              <div className="answers-navigation">
-                <button className="nav-btn active" onClick={() => document.getElementById('part1-answers').scrollIntoView({behavior: 'smooth'})}>
-                  Part 1
-                </button>
-                <button className="nav-btn" onClick={() => document.getElementById('part2-answers').scrollIntoView({behavior: 'smooth'})}>
-                  Part 2
-                </button>
-                <button className="nav-btn" onClick={() => document.getElementById('part3-answers').scrollIntoView({behavior: 'smooth'})}>
-                  Part 3
-                </button>
-                <button className="nav-btn" onClick={() => document.getElementById('part4-answers').scrollIntoView({behavior: 'smooth'})}>
-                  Part 4
-                </button>
-              </div>
-
-              {/* Part 1 Answers */}
-              <section id="part1-answers" className="answers-section">
-                <div className="answers-header">
+          <div className="panel-content">
+            {/* Part 1 */}
+            <section className="test-section part-section">
+              <div className="section-header">
+                <div className="section-number">01</div>
+                <div className="section-info">
                   <h3>Part 1: Questions 1-10</h3>
-                  <span className="answers-subtitle">NO MORE THAN TWO WORDS for each answer</span>
+                  <p className="section-subtitle">Complete the notes below. Write NO MORE THAN TWO WORDS for each answer.</p>
                 </div>
-                
-                <div className="answers-grid">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                    <div key={num} className="answer-item">
-                      <label className="answer-label">Q{num}</label>
-                      <input
-                        type="text"
-                        value={answers.part1[`q${num}`]}
-                        onChange={(e) => handlePart1Change(`q${num}`, e.target.value)}
-                        placeholder="Write your answer..."
-                        className="answer-input"
-                        disabled={submitting}
-                        maxLength={30}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
+              </div>
 
-              {/* Part 2 Answers */}
-              <section id="part2-answers" className="answers-section">
-                <div className="answers-header">
+              <div className="section-content">
+                <div className="hotel-table-container">
+                  <table className="hotel-table">
+                    <thead>
+                      <tr>
+                        <th>Hotel Name</th>
+                        <th>Location</th>
+                        <th>Cost</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="hotel-name">Belvedere Gardens Hotel</td>
+                        <td>Example: opposite Grimes Tower</td>
+                        <td>
+                          $50 per night including<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q1}
+                            onChange={(e) => handlePart1Change('q1', e.target.value)}
+                            placeholder="Answer 1"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={answers.part1.q2}
+                            onChange={(e) => handlePart1Change('q2', e.target.value)}
+                            placeholder="Answer 2"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          /><br />
+                          breakfast<br />
+                          served each evening
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="hotel-name">Belfield Grande</td>
+                        <td>
+                          On the south side of Edgeware<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q3}
+                            onChange={(e) => handlePart1Change('q3', e.target.value)}
+                            placeholder="Answer 3"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          />
+                        </td>
+                        <td>
+                          $55 per night ($10 discount if<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q4}
+                            onChange={(e) => handlePart1Change('q4', e.target.value)}
+                            placeholder="Answer 4"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          />)<br />
+                          price inclusive of
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={answers.part1.q5}
+                            onChange={(e) => handlePart1Change('q5', e.target.value)}
+                            placeholder="Answer 5"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          /><br />
+                          served in the<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q6}
+                            onChange={(e) => handlePart1Change('q6', e.target.value)}
+                            placeholder="Answer 6"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <input
+                            type="text"
+                            value={answers.part1.q7}
+                            onChange={(e) => handlePart1Change('q7', e.target.value)}
+                            placeholder="Answer 7"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          /><br />
+                          Hotel
+                        </td>
+                        <td>
+                          At the entrance to the<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q8}
+                            onChange={(e) => handlePart1Change('q8', e.target.value)}
+                            placeholder="Answer 8"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          /><br />
+                          zone
+                        </td>
+                        <td>
+                          $28 weekdays and $40 on weekends<br />
+                          and<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q9}
+                            onChange={(e) => handlePart1Change('q9', e.target.value)}
+                            placeholder="Answer 9"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          />
+                        </td>
+                        <td>
+                          must book<br />
+                          well<br />
+                          <input
+                            type="text"
+                            value={answers.part1.q10}
+                            onChange={(e) => handlePart1Change('q10', e.target.value)}
+                            placeholder="Answer 10"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                            maxLength={30}
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            {/* Part 2 */}
+            <section className="test-section part-section">
+              <div className="section-header">
+                <div className="section-number">02</div>
+                <div className="section-info">
                   <h3>Part 2: Questions 11-20</h3>
+                  <p className="section-subtitle">Questions 11-16: Label the map. Questions 17-20: Multiple choice.</p>
                 </div>
+              </div>
 
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 11-16: Map Labels</h4>
-                  <div className="answers-grid">
-                    {[11, 12, 13, 14, 15, 16].map(num => (
-                      <div key={num} className="answer-item">
-                        <label className="answer-label">Q{num}</label>
+              <div className="section-content">
+                <div className="map-container">
+                  <div className="map-title">King's Cross Station Map</div>
+                  <div className="map-placeholder">
+                    <div className="station-map">
+                      [Station Map Image]
+                    </div>
+                    <div className="map-legend">
+                      <div className="legend-item">
+                        <span className="legend-marker">📍</span>
+                        <span className="legend-label">11. Left Luggage office: </span>
                         <input
                           type="text"
-                          value={answers.part2[`q${num}`]}
-                          onChange={(e) => handlePart2SingleChoice(`q${num}`, e.target.value)}
-                          placeholder="Label..."
-                          className="answer-input"
+                          value={answers.part2.q11}
+                          onChange={(e) => handlePart2Change('q11', e.target.value)}
+                          placeholder="Your answer"
+                          className="answer-input small-input"
                           disabled={submitting}
                         />
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 17-20: Multiple Choice</h4>
-                  <div className="mcq-answers">
-                    {[17, 18, 19, 20].map(num => (
-                      <div key={num} className="mcq-answer">
-                        <label className="mcq-label">Q{num}</label>
-                        <div className="mcq-options">
-                          {['A', 'B', 'C'].map(option => (
-                            <button
-                              key={option}
-                              className={`mcq-option-btn ${answers.part2[`q${num}`] === option ? 'selected' : ''}`}
-                              onClick={() => handlePart2SingleChoice(`q${num}`, option)}
-                              disabled={submitting}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
+                      <div className="legend-item">
+                        <span className="legend-marker">🚇</span>
+                        <span className="legend-label">12. Underground station: </span>
+                        <input
+                          type="text"
+                          value={answers.part2.q12}
+                          onChange={(e) => handlePart2Change('q12', e.target.value)}
+                          placeholder="Your answer"
+                          className="answer-input small-input"
+                          disabled={submitting}
+                        />
                       </div>
-                    ))}
+                      <div className="legend-item">
+                        <span className="legend-marker">🍔</span>
+                        <span className="legend-label">13. Burgerland: </span>
+                        <input
+                          type="text"
+                          value={answers.part2.q13}
+                          onChange={(e) => handlePart2Change('q13', e.target.value)}
+                          placeholder="Your answer"
+                          className="answer-input small-input"
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-marker">🎫</span>
+                        <span className="legend-label">14. Ticket office: </span>
+                        <input
+                          type="text"
+                          value={answers.part2.q14}
+                          onChange={(e) => handlePart2Change('q14', e.target.value)}
+                          placeholder="Your answer"
+                          className="answer-input small-input"
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-marker">🍕</span>
+                        <span className="legend-label">15. Pizzeria: </span>
+                        <input
+                          type="text"
+                          value={answers.part2.q15}
+                          onChange={(e) => handlePart2Change('q15', e.target.value)}
+                          placeholder="Your answer"
+                          className="answer-input small-input"
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-marker">🚂</span>
+                        <span className="legend-label">16. Platform 9¾: </span>
+                        <input
+                          type="text"
+                          value={answers.part2.q16}
+                          onChange={(e) => handlePart2Change('q16', e.target.value)}
+                          placeholder="Your answer"
+                          className="answer-input small-input"
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </section>
 
-              {/* Part 3 Answers */}
-              <section id="part3-answers" className="answers-section">
-                <div className="answers-header">
-                  <h3>Part 3: Questions 21-30</h3>
-                </div>
-
-                <div className="answer-group">
-                  <h4 className="group-title">Question 21</h4>
-                  <div className="single-mcq">
-                    <label className="mcq-label">Q21</label>
+                <div className="mcq-container">
+                  <h4 className="mcq-title">Questions 17-20: Multiple Choice</h4>
+                  
+                  {/* Question 17 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">17. The tour is going to</p>
                     <div className="mcq-options">
                       {['A', 'B', 'C'].map(option => (
-                        <button
-                          key={option}
-                          className={`mcq-option-btn ${answers.part3.q21 === option ? 'selected' : ''}`}
-                          onClick={() => handlePart3SingleChoice('q21', option)}
-                          disabled={submitting}
-                        >
-                          {option}
-                        </button>
+                        <label key={option} className="mcq-option-radio">
+                          <input
+                            type="radio"
+                            name="q17"
+                            value={option}
+                            checked={answers.part2.q17 === option}
+                            onChange={(e) => handlePart2Change('q17', e.target.value)}
+                            disabled={submitting}
+                          />
+                          <span className="option-letter">{option}</span>
+                          <span className="option-text">
+                            {option === 'A' && "visit all major London landmarks."}
+                            {option === 'B' && "only visit selected landmarks in London."}
+                            {option === 'C' && "be a leisurely tour of most London landmarks."}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Question 18 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">18. Tour members</p>
+                    <div className="mcq-options">
+                      {['A', 'B', 'C'].map(option => (
+                        <label key={option} className="mcq-option-radio">
+                          <input
+                            type="radio"
+                            name="q18"
+                            value={option}
+                            checked={answers.part2.q18 === option}
+                            onChange={(e) => handlePart2Change('q18', e.target.value)}
+                            disabled={submitting}
+                          />
+                          <span className="option-letter">{option}</span>
+                          <span className="option-text">
+                            {option === 'A' && "may be unfamiliar with the Underground."}
+                            {option === 'B' && "are all equally familiar with the Underground."}
+                            {option === 'C' && "are all unfamiliar with the Underground."}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Question 19 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">19. The tour group is intending to</p>
+                    <div className="mcq-options">
+                      {['A', 'B', 'C'].map(option => (
+                        <label key={option} className="mcq-option-radio">
+                          <input
+                            type="radio"
+                            name="q19"
+                            value={option}
+                            checked={answers.part2.q19 === option}
+                            onChange={(e) => handlePart2Change('q19', e.target.value)}
+                            disabled={submitting}
+                          />
+                          <span className="option-letter">{option}</span>
+                          <span className="option-text">
+                            {option === 'A' && "take a morning train."}
+                            {option === 'B' && "avoid trains crowded with shoppers."}
+                            {option === 'C' && "avoid the rush hour."}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Question 20 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">20. Seating on Underground trains</p>
+                    <div className="mcq-options">
+                      {['A', 'B', 'C'].map(option => (
+                        <label key={option} className="mcq-option-radio">
+                          <input
+                            type="radio"
+                            name="q20"
+                            value={option}
+                            checked={answers.part2.q20 === option}
+                            onChange={(e) => handlePart2Change('q20', e.target.value)}
+                            disabled={submitting}
+                          />
+                          <span className="option-letter">{option}</span>
+                          <span className="option-text">
+                            {option === 'A' && "has been previously reserved."}
+                            {option === 'B' && "can be guaranteed for those with a disability."}
+                            {option === 'C' && "is never guaranteed"}
+                          </span>
+                        </label>
                       ))}
                     </div>
                   </div>
                 </div>
+              </div>
+            </section>
 
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 22-23: Select TWO letters</h4>
-                  <div className="multi-select">
-                    {['A', 'B', 'C', 'D', 'E'].map(option => (
-                      <label key={option} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={answers.part3.q22.includes(option)}
-                          onChange={() => handlePart3MultiChoice('q22', option)}
-                          disabled={submitting || (answers.part3.q22.length >= 2 && !answers.part3.q22.includes(option))}
-                        />
-                        <span className="checkbox-label">{option}</span>
-                        <span className="checkbox-text">
-                          {option === 'A' && "government money"}
-                          {option === 'B' && "a college grant"}
-                          {option === 'C' && "alumni donations"}
-                          {option === 'D' && "the commerce faculty"}
-                          {option === 'E' && "an unnamed patron"}
-                        </span>
-                      </label>
-                    ))}
-                    <div className="selection-info">
-                      Selected: <span className="selected-items">{answers.part3.q22.join(', ') || 'None'}</span>
-                      <span className="selection-count">({answers.part3.q22.length}/2)</span>
+            {/* Part 3 */}
+            <section className="test-section part-section">
+              <div className="section-header">
+                <div className="section-number">03</div>
+                <div className="section-info">
+                  <h3>Part 3: Questions 21-30</h3>
+                  <p className="section-subtitle">Multiple choice and matching questions.</p>
+                </div>
+              </div>
+
+              <div className="section-content">
+                <div className="mcq-container">
+                  {/* Question 21 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">21. The construction of the new faculty building will</p>
+                    <div className="mcq-options">
+                      {['A', 'B', 'C'].map(option => (
+                        <label key={option} className="mcq-option-radio">
+                          <input
+                            type="radio"
+                            name="q21"
+                            value={option}
+                            checked={answers.part3.q21 === option}
+                            onChange={(e) => handlePart3SingleChoice('q21', e.target.value)}
+                            disabled={submitting}
+                          />
+                          <span className="option-letter">{option}</span>
+                          <span className="option-text">
+                            {option === 'A' && "finish during the summer."}
+                            {option === 'B' && "conclude during the first term."}
+                            {option === 'C' && "be approved during the summer."}
+                          </span>
+                        </label>
+                      ))}
                     </div>
                   </div>
-                </div>
 
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 24-25: Select TWO letters</h4>
-                  <div className="multi-select">
-                    {['A', 'B', 'C', 'D', 'E'].map(option => (
-                      <label key={option} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={answers.part3.q24.includes(option)}
-                          onChange={() => handlePart3MultiChoice('q24', option)}
-                          disabled={submitting || (answers.part3.q24.length >= 2 && !answers.part3.q24.includes(option))}
-                        />
-                        <span className="checkbox-label">{option}</span>
-                        <span className="checkbox-text">
-                          {option === 'A' && "a larger gym"}
-                          {option === 'B' && "a relaxation room"}
-                          {option === 'C' && "a computer lab"}
-                          {option === 'D' && "a hardware zone"}
-                          {option === 'E' && "lecture rooms"}
-                        </span>
-                      </label>
-                    ))}
-                    <div className="selection-info">
-                      Selected: <span className="selected-items">{answers.part3.q24.join(', ') || 'None'}</span>
-                      <span className="selection-count">({answers.part3.q24.length}/2)</span>
+                  {/* Questions 22-23 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">Questions 22-23. The two main sources of funding for the project were</p>
+                    <div className="mcq-options multiple-select">
+                      {['A', 'B', 'C', 'D', 'E'].map(option => (
+                        <label key={option} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={answers.part3.q22.includes(option)}
+                            onChange={() => handlePart3MultiChoice('q22', option)}
+                            disabled={submitting || (answers.part3.q22.length >= 2 && !answers.part3.q22.includes(option))}
+                          />
+                          <span className="checkbox-label">{option}</span>
+                          <span className="checkbox-text">
+                            {option === 'A' && "government money"}
+                            {option === 'B' && "a college grant"}
+                            {option === 'C' && "alumni donations"}
+                            {option === 'D' && "the commerce faculty"}
+                            {option === 'E' && "an unnamed patron"}
+                          </span>
+                        </label>
+                      ))}
+                      <div className="selection-info">
+                        Selected: <span className="selected-items">{answers.part3.q22.join(', ') || 'None'}</span>
+                        <span className="selection-count">({answers.part3.q22.length}/2)</span>
+                      </div>
                     </div>
+                    <p className="instruction-note">Select TWO letters</p>
                   </div>
-                </div>
 
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 26-30</h4>
-                  <div className="table-answers">
-                    {[26, 27, 28, 29, 30].map(num => (
-                      <div key={num} className="table-row">
-                        <label className="table-label">Q{num}</label>
-                        <div className="table-options">
-                          {['A', 'B', 'C'].map(option => (
-                            <button
-                              key={option}
-                              className={`table-option-btn ${answers.part3[`q${num}`] === option ? 'selected' : ''}`}
-                              onClick={() => handlePart3SingleChoice(`q${num}`, option)}
-                              disabled={submitting}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
+                  {/* Questions 24-25 */}
+                  <div className="mcq-item">
+                    <p className="mcq-question">Questions 24-25. What two new items are added to the plans?</p>
+                    <div className="mcq-options multiple-select">
+                      {['A', 'B', 'C', 'D', 'E'].map(option => (
+                        <label key={option} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={answers.part3.q24.includes(option)}
+                            onChange={() => handlePart3MultiChoice('q24', option)}
+                            disabled={submitting || (answers.part3.q24.length >= 2 && !answers.part3.q24.includes(option))}
+                          />
+                          <span className="checkbox-label">{option}</span>
+                          <span className="checkbox-text">
+                            {option === 'A' && "a larger gym"}
+                            {option === 'B' && "a relaxation room"}
+                            {option === 'C' && "a computer lab"}
+                            {option === 'D' && "a hardware zone"}
+                            {option === 'E' && "lecture rooms"}
+                          </span>
+                        </label>
+                      ))}
+                      <div className="selection-info">
+                        Selected: <span className="selected-items">{answers.part3.q24.join(', ') || 'None'}</span>
+                        <span className="selection-count">({answers.part3.q24.length}/2)</span>
                       </div>
-                    ))}
+                    </div>
+                    <p className="instruction-note">Select TWO letters</p>
                   </div>
-                </div>
-              </section>
 
-              {/* Part 4 Answers */}
-              <section id="part4-answers" className="answers-section">
-                <div className="answers-header">
-                  <h3>Part 4: Questions 31-40</h3>
-                  <span className="answers-subtitle">Q31-32: NO MORE THAN TWO WORDS | Q33-40: NO MORE THAN THREE WORDS</span>
-                </div>
-
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 31-32</h4>
-                  <div className="answers-grid">
-                    {[31, 32].map(num => (
-                      <div key={num} className="answer-item">
-                        <label className="answer-label">Q{num}</label>
-                        <input
-                          type="text"
-                          value={answers.part4[`q${num}`]}
-                          onChange={(e) => handlePart4Change(`q${num}`, e.target.value)}
-                          placeholder="Answer..."
-                          className="answer-input"
-                          disabled={submitting}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="answer-group">
-                  <h4 className="group-title">Questions 33-40</h4>
-                  <div className="answers-grid">
-                    {[33, 34, 35, 36, 37, 38, 39, 40].map(num => (
-                      <div key={num} className="answer-item">
-                        <label className="answer-label">Q{num}</label>
-                        <input
-                          type="text"
-                          value={answers.part4[`q${num}`]}
-                          onChange={(e) => handlePart4Change(`q${num}`, e.target.value)}
-                          placeholder="Answer..."
-                          className="answer-input"
-                          disabled={submitting}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              <div className="answers-footer">
-                <div className="progress-summary">
-                  <div className="progress-item">
-                    <span className="progress-label">Total Questions:</span>
-                    <span className="progress-value">40</span>
-                  </div>
-                  <div className="progress-item">
-                    <span className="progress-label">Answered:</span>
-                    <span className="progress-value answered">
-                      {Object.values(answers.part1).filter(a => a).length +
-                       Object.values(answers.part2).filter(a => a).length +
-                       (answers.part3.q21 ? 1 : 0) +
-                       answers.part3.q22.length +
-                       answers.part3.q24.length +
-                       Object.values(answers.part3).filter((v, i) => i >= 5 && v).length +
-                       Object.values(answers.part4).filter(a => a).length}
-                    </span>
-                  </div>
-                  <div className="progress-item">
-                    <span className="progress-label">Remaining:</span>
-                    <span className="progress-value remaining">
-                      {40 - (Object.values(answers.part1).filter(a => a).length +
-                       Object.values(answers.part2).filter(a => a).length +
-                       (answers.part3.q21 ? 1 : 0) +
-                       answers.part3.q22.length +
-                       answers.part3.q24.length +
-                       Object.values(answers.part3).filter((v, i) => i >= 5 && v).length +
-                       Object.values(answers.part4).filter(a => a).length)}
-                    </span>
+                  <div className="table-container">
+                    <p className="table-title">Questions 26-30. What does Melisa decide about the following modules?</p>
+                    <table className="module-table">
+                      <thead>
+                        <tr>
+                          <th>Module</th>
+                          <th>A: She will study it</th>
+                          <th>B: She won't study it</th>
+                          <th>C: She might study it</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[26, 27, 28, 29, 30].map((num, index) => (
+                          <tr key={num}>
+                            <td>{num}. {['International Markets', 'Product Placement', 'Organisational Behaviour', 'Managing People', 'Public Relations'][index]}</td>
+                            {['A', 'B', 'C'].map(option => (
+                              <td key={option}>
+                                <label className="table-radio-label">
+                                  <input
+                                    type="radio"
+                                    name={`q${num}`}
+                                    value={option}
+                                    checked={answers.part3[`q${num}`] === option}
+                                    onChange={(e) => handlePart3SingleChoice(`q${num}`, e.target.value)}
+                                    disabled={submitting}
+                                  />
+                                  <span className="table-radio-text">{option}</span>
+                                </label>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
+
+            {/* Part 4 */}
+            <section className="test-section part-section">
+              <div className="section-header">
+                <div className="section-number">04</div>
+                <div className="section-info">
+                  <h3>Part 4: Questions 31-40</h3>
+                  <p className="section-subtitle">Complete the sentences and table.</p>
+                </div>
+              </div>
+
+              <div className="section-content">
+                <div className="sentence-completion">
+                  <h4 className="completion-title">Questions 31-32</h4>
+                  <p className="completion-text">
+                    It seems that personality tests are part of our
+                    <input
+                      type="text"
+                      value={answers.part4.q31}
+                      onChange={(e) => handlePart4Change('q31', e.target.value)}
+                      placeholder="Answer 31"
+                      className="answer-input inline-input"
+                      disabled={submitting}
+                    />
+                    as they fulfil a basic human need to understand motivation.
+                  </p>
+                  <p className="completion-text">
+                    Understanding why we communicate and
+                    <input
+                      type="text"
+                      value={answers.part4.q32}
+                      onChange={(e) => handlePart4Change('q32', e.target.value)}
+                      placeholder="Answer 32"
+                      className="answer-input inline-input"
+                      disabled={submitting}
+                    />
+                    others in the way that we do is revealed by personality tests.
+                  </p>
+                </div>
+
+                <div className="table-container">
+                  <h4 className="table-title">Questions 33-40: Complete the table below</h4>
+                  <table className="personality-table">
+                    <thead>
+                      <tr>
+                        <th>Test type</th>
+                        <th>What is assessed</th>
+                        <th>Who uses it</th>
+                        <th>Accuracy</th>
+                        <th>Advantages/Disadvantages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Graphology</strong><br />(Handwriting test)</td>
+                        <td>handwriting such as style and how letters are formed</td>
+                        <td>careers officers/ potential employers</td>
+                        <td>
+                          believed to have
+                          <input
+                            type="text"
+                            value={answers.part4.q33}
+                            onChange={(e) => handlePart4Change('q33', e.target.value)}
+                            placeholder="Answer 33"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          by the British Psychological Society
+                        </td>
+                        <td>
+                          can be biased by a/an
+                          <input
+                            type="text"
+                            value={answers.part4.q34}
+                            onChange={(e) => handlePart4Change('q34', e.target.value)}
+                            placeholder="Answer 34"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          subjectivity: however, on the plus side, it is quick and easy to use
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Rorschach</strong><br />(Ink blot test)</td>
+                        <td>individual reactions to a series of ink blots on pieces of card</td>
+                        <td>
+                          respected
+                          <input
+                            type="text"
+                            value={answers.part4.q35}
+                            onChange={(e) => handlePart4Change('q35', e.target.value)}
+                            placeholder="Answer 35"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          like the Tavistock Clinic
+                        </td>
+                        <td>critics regard it merely as a pseudoscience whilst others hold it in high regard</td>
+                        <td>
+                          a major problem of the test is that it is affected by
+                          <input
+                            type="text"
+                            value={answers.part4.q36}
+                            onChange={(e) => handlePart4Change('q36', e.target.value)}
+                            placeholder="Answer 36"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Luscher</strong><br />(Colour test)</td>
+                        <td>
+                          individual response to
+                          <input
+                            type="text"
+                            value={answers.part4.q37}
+                            onChange={(e) => handlePart4Change('q37', e.target.value)}
+                            placeholder="Answer 37"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          that are ranked in order of preference
+                        </td>
+                        <td>doctors, psychologists, government agencies and universities</td>
+                        <td>
+                          seemingly a
+                          <input
+                            type="text"
+                            value={answers.part4.q38}
+                            onChange={(e) => handlePart4Change('q38', e.target.value)}
+                            placeholder="Answer 38"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          of psychological assessment
+                        </td>
+                        <td>a benefit of the test is that it is sensitive enough to respond to individual mood changes</td>
+                      </tr>
+                      <tr>
+                        <td><strong>TAT</strong><br />(Thematic Apperception Test)</td>
+                        <td>
+                          how an individual creates stories based on a set of cards featuring
+                          <input
+                            type="text"
+                            value={answers.part4.q39}
+                            onChange={(e) => handlePart4Change('q39', e.target.value)}
+                            placeholder="Answer 39"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          in ambiguous scenes
+                        </td>
+                        <td>those working in psychological research and forensic science</td>
+                        <td>
+                          due to the
+                          <input
+                            type="text"
+                            value={answers.part4.q40}
+                            onChange={(e) => handlePart4Change('q40', e.target.value)}
+                            placeholder="Answer 40"
+                            className="answer-input inline-input"
+                            disabled={submitting}
+                          />
+                          a universally agreed method of scoring and standardised cards, individual comparisons are problematic
+                        </td>
+                        <td>the fact that it is quick and simple to use is a huge advantage</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
           </div>
-        )}
+        </div>
       </main>
 
       {/* Footer */}
